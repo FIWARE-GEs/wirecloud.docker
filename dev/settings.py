@@ -18,30 +18,9 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-# We only support postgres and sqlite3 for now
-if os.environ.get("DB_HOST", "").strip() != "":
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': os.environ.get("DB_NAME", "postgres"),
-            'USER': os.environ.get("DB_USERNAME", "postgres"),
-            'PASSWORD': os.environ.get("DB_PASSWORD", "postgres"),
-            'HOST': os.environ["DB_HOST"],
-            'PORT': os.environ.get("DB_PORT", "5432"),
-        },
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(DATADIR, 'wirecloud.db'),
-            'USER': '',
-            'PASSWORD': '',
-            'HOST': '',
-            'PORT': '',
-        },
-    }
-
+# Default settings
+DB_USERNAME = "postgres"
+DB_PASSWORD = "postgres"
 
 if "ELASTICSEARCH2_URL" in os.environ:
     HAYSTACK_CONNECTIONS = {
@@ -131,7 +110,11 @@ WSGI_APPLICATION = 'wirecloud_instance.wsgi.application'
 
 ## String settings
 STRING_SETTINGS = (
+    "CACHE_MIDDLEWARE_KEY_PREFIX",
     "CSRF_COOKIE_NAME",
+    "DB_PASSWORD",
+    "DB_USERNAME",
+    "DEFAULT_FROM_EMAIL",
     "EMAIL_HOST",
     "EMAIL_HOST_PASSWORD",
     "EMAIL_HOST_USER",
@@ -149,6 +132,8 @@ STRING_SETTINGS = (
     "SOCIAL_AUTH_KEYCLOAK_OIDC_URL",
 )
 SENSITIVE_SETTINGS = (
+    "DB_PASSWORD",
+    "DB_USERNAME",
     "EMAIL_HOST_PASSWORD",
     "LOGOUT_REDIRECT_URL",
     "SECRET_KEY",
@@ -193,20 +178,52 @@ BOOLEAN_SETTINGS = (
     "EMAIL_USE_SSL",
     "SESSION_COOKIE_HTTPONLY",
     "SESSION_COOKIE_SECURE",
-    "SOCIAL_AUTH_FIWARE_VERIFY_SSL",
-    "SOCIAL_AUTH_VERIFY_SSL",
     "SOCIAL_AUTH_KEYCLOAK_OIDC_GLOBAL_ROLE",
-    "SOCIAL_AUTH_KEYCLOAK_OIDC_VERIFY_SSL",
 )
 for setting in BOOLEAN_SETTINGS:
     value = os.environ.get(setting, "").strip()
     if value != "":
         locals()[setting] = value.lower() == "true"
 
+## Verify SSL settings
+VERIFY_SETTINGS = (
+    "WIRECLOUD_HTTPS_VERIFY",
+    "SOCIAL_AUTH_FIWARE_VERIFY_SSL",
+    "SOCIAL_AUTH_VERIFY_SSL",
+    "SOCIAL_AUTH_KEYCLOAK_OIDC_VERIFY_SSL",
+)
+for setting in VERIFY_SETTINGS:
+    value = os.environ.get(setting, "/etc/ssl/certs/ca-certificates.crt").strip()
+    locals()[setting] = True if value.lower() == "true" else False if value.lower() == "false" else value
 
-# HTTPS verification
-verify = os.environ.get("HTTPS_VERIFY", "/etc/ssl/certs/ca-certificates.crt").strip()
-WIRECLOUD_HTTPS_VERIFY = True if verify.lower() == "true" else False if verify.lower() == "false" else verify
+# Database configuration
+# We only support postgres and sqlite3 for now
+if os.environ.get("DB_HOST", "").strip() != "":
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': os.environ.get("DB_NAME", "postgres"),
+            'USER': DB_USERNAME,
+            'PASSWORD': DB_PASSWORD,
+            'HOST': os.environ["DB_HOST"],
+            'PORT': os.environ.get("DB_PORT", "5432"),
+        },
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(DATADIR, 'wirecloud.db'),
+            'USER': '',
+            'PASSWORD': '',
+            'HOST': '',
+            'PORT': '',
+        },
+    }
+
+# Email configuration
+if "DEFAULT_FROM_EMAIL" not in locals():
+    DEFAULT_FROM_EMAIL = locals().get("EMAIL_HOST_USER", "webmaster@localhost")
 
 # FIWARE & Keycloak configuration
 IDM_AUTH = 'fiware' if "FIWARE_IDM_SERVER" in locals() and "SOCIAL_AUTH_FIWARE_KEY" in locals() and "SOCIAL_AUTH_FIWARE_SECRET" in locals() else None

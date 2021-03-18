@@ -18,30 +18,9 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-# We only support postgres and sqlite3 for now
-if os.environ.get("DB_HOST", "").strip() != "":
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': os.environ.get("DB_NAME", "postgres"),
-            'USER': os.environ.get("DB_USERNAME", "postgres"),
-            'PASSWORD': os.environ.get("DB_PASSWORD", "postgres"),
-            'HOST': os.environ["DB_HOST"],
-            'PORT': os.environ.get("DB_PORT", "5432"),
-        },
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(DATADIR, 'wirecloud.db'),
-            'USER': '',
-            'PASSWORD': '',
-            'HOST': '',
-            'PORT': '',
-        },
-    }
-
+# Default settings
+DB_USERNAME = "postgres"
+DB_PASSWORD = "postgres"
 
 if "ELASTICSEARCH2_URL" in os.environ:
     HAYSTACK_CONNECTIONS = {
@@ -132,6 +111,7 @@ WSGI_APPLICATION = 'wirecloud_instance.wsgi.application'
 
 ## String settings
 STRING_SETTINGS = (
+    "CACHE_MIDDLEWARE_KEY_PREFIX",
     "CSRF_COOKIE_NAME",
     "EMAIL_HOST",
     "EMAIL_HOST_PASSWORD",
@@ -228,9 +208,41 @@ else:
         'haystack',
     )
 
-# HTTPS verification
-verify = os.environ.get("HTTPS_VERIFY", "/etc/ssl/certs/ca-certificates.crt").strip()
-WIRECLOUD_HTTPS_VERIFY = True if verify.lower() == "true" else False if verify.lower() == "false" else verify
+## Verify SSL settings
+VERIFY_SETTINGS = (
+    "WIRECLOUD_HTTPS_VERIFY",
+    "SOCIAL_AUTH_FIWARE_VERIFY_SSL",
+    "SOCIAL_AUTH_VERIFY_SSL",
+    "SOCIAL_AUTH_KEYCLOAK_VERIFY_SSL",
+)
+for setting in VERIFY_SETTINGS:
+    value = os.environ.get(setting, "/etc/ssl/certs/ca-certificates.crt").strip()
+    locals()[setting] = True if value.lower() == "true" else False if value.lower() == "false" else value
+
+# Database configuration
+# We only support postgres and sqlite3 for now
+if os.environ.get("DB_HOST", "").strip() != "":
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': os.environ.get("DB_NAME", "postgres"),
+            'USER': DB_USERNAME,
+            'PASSWORD': DB_PASSWORD,
+            'HOST': os.environ["DB_HOST"],
+            'PORT': os.environ.get("DB_PORT", "5432"),
+        },
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(DATADIR, 'wirecloud.db'),
+            'USER': '',
+            'PASSWORD': '',
+            'HOST': '',
+            'PORT': '',
+        },
+    }
 
 # Login/logout URLs
 LOGIN_URL = reverse_lazy('login')
